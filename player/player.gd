@@ -13,11 +13,13 @@ extends CharacterBody2D
 ##  - Faster falling than rising, so jumps feel snappy instead of floaty.
 ##  - Combo cancelling: the next swing can interrupt the previous swing's
 ##    recovery, so mashing attack flows instead of waiting on animations.
+##  - Dash cancelling: a dash can interrupt a sword swing at any time, so
+##    you are never stuck in an attack when you need to get away.
 
 signal health_changed(current: float, maximum: float)
 signal died
 
-enum State { NORMAL, HURT, DEAD }
+enum State { NORMAL, DASH, HURT, DEAD }
 
 ## The sword combo. Each entry is one swing. All times are in seconds.
 ##   startup   - delay between pressing attack and the blade being able to hit
@@ -79,6 +81,20 @@ const HALF_WIDTH := 6.0
 ## A jump pressed this long before landing still happens on landing.
 @export var jump_buffer_time := 0.12
 
+@export_group("Dash")
+## Dash speed in pixels per second.
+## Distance covered = dash_speed x dash_duration (about 80 pixels by default).
+@export var dash_speed := 480.0
+## How long a dash lasts. It cannot be cancelled once it starts.
+@export var dash_duration := 0.16
+## Delay after a dash ends before you can dash again.
+@export var dash_cooldown := 0.3
+## How many dashes you get in the air before you must land again.
+@export var air_dashes := 1
+## A dash pressed this long before it is possible still happens. This also
+## covers pressing dash a split second before pressing a direction.
+@export var dash_buffer_time := 0.12
+
 @export_group("Combat")
 @export var max_health := 100.0
 ## An attack pressed this long before it is possible still happens.
@@ -108,12 +124,19 @@ var _jump_velocity := 0.0
 var _coyote_timer := 0.0
 var _jump_buffer_timer := 0.0
 var _attack_buffer_timer := 0.0
+var _dash_buffer_timer := 0.0
+var _dash_timer := 0.0
+var _dash_cooldown_timer := 0.0
 var _combo_timer := 0.0
 var _hurt_timer := 0.0
 var _invincible_timer := 0.0
 
 ## True while rising from a jump with the button still held.
 var _is_jumping := false
+
+## 1 = dashing right, -1 = dashing left. Independent of `facing`.
+var _dash_direction := 1
+var _air_dashes_left := 0
 
 ## Which entry of ATTACKS is being performed. -1 means "not attacking".
 var _attack_index := -1
@@ -151,6 +174,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_jump_buffer_timer = jump_buffer_time
 	if event.is_action_pressed("attack"):
 		_attack_buffer_timer = attack_buffer_time
+	if event.is_action_pressed("dash"):
+		_dash_buffer_timer = dash_buffer_time
 
 
 func _physics_process(delta: float) -> void:
@@ -158,6 +183,8 @@ func _physics_process(delta: float) -> void:
 	match state:
 		State.NORMAL:
 			_process_normal(delta)
+		State.DASH:
+			_process_dash(delta)
 		State.HURT:
 			_process_hurt(delta)
 		State.DEAD:
@@ -169,6 +196,17 @@ func _physics_process(delta: float) -> void:
 
 func is_attacking() -> bool:
 	return _attack_index >= 0
+
+
+## The hitboxes that can deal damage right now (used by the debug overlay).
+func get_active_hitboxes() -> Array[Area2D]:
+	if is_attacking():
+		var attack := ATTACKS[_attack_index]
+		var active_start: float = attack["startup"]
+		var active_end: float = active_start + attack["active"]
+		if _attack_time >= active_start and _attack_time < active_end:
+			return [sword_hitbox]
+	return []
 
 
 ## Called by enemies and projectiles. `from_x` is the attacker's x position,
@@ -210,6 +248,15 @@ func _process_normal(delta: float) -> void:
 	if on_floor:
 		_coyote_timer = coyote_time
 		_is_jumping = false
+		_air_dashes_left = air_dashes
+
+	# A dash needs a direction to be held: it goes where you are pressing,
+	# not where the character happens to be facing.
+	var has_dash_available := on_floor or _air_dashes_left > 0
+	if _dash_buffer_timer > 0.0 and _dash_cooldown_timer <= 0.0 and input_dir != 0.0 and has_dash_available:
+		_start_dash(int(input_dir), on_floor)
+		_process_dash(delta)  # Start moving on this very frame.
+		return
 
 	_update_attack(delta, input_dir)
 
@@ -243,6 +290,31 @@ func _process_normal(delta: float) -> void:
 	if _is_jumping and velocity.y < 0.0 and not Input.is_action_pressed("jump"):
 		velocity.y *= jump_cut_multiplier
 		_is_jumping = false
+
+
+## A dash is a short burst in a straight line. Nothing the player presses
+## can interrupt it, and it gives no protection: getting hit still hurts
+## (and is the one thing that does cut a dash short).
+func _process_dash(_delta: float) -> void:
+	velocity = Vector2(_dash_direction * dash_speed, 0.0)
+	if _dash_timer <= 0.0:
+		state = State.NORMAL
+		_dash_cooldown_timer = dash_cooldown
+		# Come out of the dash at running speed rather than a dead stop.
+		velocity.x = _dash_direction * run_speed
+
+
+func _start_dash(direction: int, on_floor: bool) -> void:
+	state = State.DASH
+	_dash_direction = direction
+	_dash_timer = dash_duration
+	_dash_buffer_timer = 0.0
+	if not on_floor:
+		_air_dashes_left -= 1
+	# Dashing cancels whatever swing was in progress.
+	_attack_index = -1
+	_combo_step = 0
+	_is_jumping = false
 
 
 func _process_hurt(delta: float) -> void:
@@ -352,6 +424,9 @@ func _tick_timers(delta: float) -> void:
 	_coyote_timer = maxf(_coyote_timer - delta, 0.0)
 	_jump_buffer_timer = maxf(_jump_buffer_timer - delta, 0.0)
 	_attack_buffer_timer = maxf(_attack_buffer_timer - delta, 0.0)
+	_dash_buffer_timer = maxf(_dash_buffer_timer - delta, 0.0)
+	_dash_timer = maxf(_dash_timer - delta, 0.0)
+	_dash_cooldown_timer = maxf(_dash_cooldown_timer - delta, 0.0)
 	_hurt_timer = maxf(_hurt_timer - delta, 0.0)
 	_invincible_timer = maxf(_invincible_timer - delta, 0.0)
 	if not is_attacking():
@@ -393,11 +468,16 @@ func _update_visuals() -> void:
 	slash.visible = slash_visible
 	sword.visible = not is_attacking()
 
+	visuals.scale.y = 1.0
 	if state == State.DEAD:
 		body.color = Color(0.3, 0.3, 0.35)
 		visuals.rotation = -PI / 2.0 * facing if is_on_floor() else 0.0
 	elif state == State.HURT:
 		body.color = Color(1.0, 0.35, 0.35)
+	elif state == State.DASH:
+		# Placeholder dash look: brighter, and stretched into a streak.
+		body.color = _body_color.lightened(0.5)
+		visuals.scale = Vector2(facing * 1.5, 0.75)
 	else:
 		body.color = _body_color
 

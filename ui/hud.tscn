@@ -118,7 +118,7 @@ offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_font_sizes/font_size = 8
-text = "Move: A/D or Arrows     Jump: Space     Attack: J, X or Left Mouse     Pause: Esc"
+text = "Move: A/D or Arrows    Jump: Space    Attack: J, X or Left Mouse    Dash: Shift, K or Right Mouse    Pause: Esc"
 horizontal_alignment = 1
 
 [node name="PauseLabel" type="Label" parent="."]
