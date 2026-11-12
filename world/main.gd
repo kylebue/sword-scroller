@@ -104,6 +104,7 @@ func _start_boss_fight() -> void:
 	entities.add_child(boss)
 	hud.show_boss(boss)
 	hud.show_message("BOSS!")
+	Sfx.play(&"boss_appear")
 
 
 func _on_boss_died(_boss: Enemy) -> void:

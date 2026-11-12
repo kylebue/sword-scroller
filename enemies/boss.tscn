@@ -24,6 +24,7 @@ move_speed = 40.0
 can_be_staggered = false
 health_drop_chance = 1.0
 health_drop_amount = 50.0
+death_sound = &"boss_die"
 health_pickup_scene = ExtResource("2_pickup")
 hit_spark_scene = ExtResource("3_spark")
 

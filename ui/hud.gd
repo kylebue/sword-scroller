@@ -30,6 +30,9 @@ func _ready() -> void:
 	tween.tween_property(hint_label, "modulate:a", 0.0, 1.0)
 	resume_button.pressed.connect(set_paused.bind(false))
 	main_menu_button.pressed.connect(_on_main_menu_pressed)
+	for button: Button in [resume_button, main_menu_button]:
+		button.focus_entered.connect(Sfx.play.bind(&"ui_move"))
+		button.pressed.connect(Sfx.play.bind(&"ui_select"))
 
 
 func _unhandled_input(event: InputEvent) -> void:

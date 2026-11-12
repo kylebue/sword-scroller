@@ -84,6 +84,11 @@ func _set_state(new_state: State) -> void:
 	_has_hit = false
 	# The hitbox always sits in front of the grunt.
 	attack_hitbox.position.x = absf(attack_hitbox.position.x) * facing
+	match state:
+		State.WINDUP:
+			Sfx.play(&"windup")
+		State.STRIKE:
+			Sfx.play(&"enemy_swing")
 
 
 func _update_visuals() -> void:

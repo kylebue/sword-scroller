@@ -19,5 +19,6 @@ func _physics_process(_delta: float) -> void:
 	for hit_body in get_overlapping_bodies():
 		if hit_body is Player and hit_body.health < hit_body.max_health:
 			hit_body.heal(heal_amount)
+			Sfx.play(&"pickup")
 			queue_free()
 			return

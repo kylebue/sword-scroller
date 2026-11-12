@@ -11,6 +11,7 @@ The game opens on a main menu, which also has a switch for a temporary
 **developer debug mode** (see below).
 
 All visuals are coloured-rectangle placeholders, ready to be swapped for pixel art.
+The sound effects are generated placeholders too.
 
 ## Running it
 
@@ -69,6 +70,7 @@ To change the bindings: **Project > Project Settings > Input Map**.
 | `enemies/enemy.gd` | Base class shared by all enemies (health, knockback, death). |
 | `enemies/grunt.gd`, `spitter.gd`, `boss.gd` | The AI for each enemy type. |
 | `effects/game_feel.gd` | Hitstop and screen shake (autoload named `GameFeel`). |
+| `audio/sfx.gd`, `audio/sfx/` | Sound effects (autoload named `Sfx`) and their `.wav` files. |
 | `ui/main_menu.*` | The main menu (the scene the game starts on). |
 | `ui/hud.*` | Health bars, distance, messages, pause and game over screens. |
 | `debug/` | The temporary developer debug mode. |
@@ -89,6 +91,8 @@ Inspector. Hover over a property name to read what it does.
 | How high a downward swing bounces you (0 = no bounce) | Player node > **Combat** > Down Swing Bounce Height |
 | The sword's reach | Resize `SwordHitbox` (or `DownHitbox`) in `player/player.tscn` |
 | How strong hitstop and screen shake are | `hitstop` / `shake` in `ATTACKS`, and `effects/game_feel.gd` |
+| Which sound a sword swing makes | `swing_sound` / `hit_sound` in `ATTACKS` |
+| Overall sound effect volume | The **Audio** tab at the bottom of the editor > SFX bus |
 | Where the player sits on screen | `world/main.tscn` > GameCamera > Player Screen Position |
 | How fast the game gets harder | `world/difficulty.gd` |
 | Distance between bosses | `world/main.tscn` > Main node > Boss Interval M |
@@ -112,6 +116,22 @@ If motion looks slightly choppy on a high-refresh-rate monitor, try
 
 The player and enemies only collide with the world, not with each other, so
 nobody gets stuck on anybody. All damage comes from hitboxes (`Area2D` nodes).
+
+## Replacing the placeholder sounds
+
+Every sound is listed by name in the `SOUNDS` table in `audio/sfx.gd`, and
+played from code with a line like `Sfx.play(&"hit")`.
+
+- **To replace a sound**, overwrite its file in `audio/sfx/` with your own,
+  keeping the same name (for example `hit.wav`). Nothing else needs to change.
+  To use a different file name or format (`.ogg`, `.mp3`), change that sound's
+  path in the `SOUNDS` table instead.
+- **To add a sound**, add a line to `SOUNDS`, then call `Sfx.play()` with its
+  name wherever it should happen.
+
+Each sound plays at a slightly random pitch so repeats do not sound robotic
+(`PITCH_VARIATION` in `audio/sfx.gd`; set it to 0 to turn that off). The boss
+reuses the normal sounds at a lower pitch.
 
 ## Replacing the placeholder art
 

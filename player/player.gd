@@ -36,21 +36,25 @@ enum Swing { NONE, COMBO, DOWN }
 ##   lunge     - forward speed during the swing while on the ground
 ##   hitstop   - freeze time when the swing connects
 ##   shake     - screen shake when the swing connects (pixels)
+##   swing_sound, hit_sound - names of sounds in audio/sfx.gd
 const ATTACKS: Array[Dictionary] = [
 	{
 		"startup": 0.033, "active": 0.085, "recovery": 0.13,
 		"damage": 10.0, "knockback": 120.0, "lunge": 120.0,
 		"hitstop": 0.04, "shake": 1.5,
+		"swing_sound": &"swing", "hit_sound": &"hit",
 	},
 	{
 		"startup": 0.033, "active": 0.085, "recovery": 0.13,
 		"damage": 10.0, "knockback": 120.0, "lunge": 120.0,
 		"hitstop": 0.04, "shake": 1.5,
+		"swing_sound": &"swing", "hit_sound": &"hit",
 	},
 	{
 		"startup": 0.05, "active": 0.1, "recovery": 0.24,
 		"damage": 18.0, "knockback": 270.0, "lunge": 170.0,
 		"hitstop": 0.085, "shake": 4.0,
+		"swing_sound": &"swing_heavy", "hit_sound": &"hit_heavy",
 	},
 ]
 
@@ -61,6 +65,7 @@ const DOWN_SWING: Dictionary = {
 	"startup": 0.033, "active": 0.15, "recovery": 0.12,
 	"damage": 12.0, "knockback": 0.0, "lunge": 0.0,
 	"hitstop": 0.05, "shake": 2.0,
+	"swing_sound": &"swing", "hit_sound": &"hit",
 }
 
 ## Half the width of the collision shape. Used to keep the player on screen.
@@ -150,6 +155,8 @@ var _invincible_timer := 0.0
 
 ## True while rising from a jump with the button still held.
 var _is_jumping := false
+## Seconds spent off the ground (used for the landing sound).
+var _air_time := 0.0
 
 ## 1 = dashing right, -1 = dashing left. Independent of `facing`.
 var _dash_direction := 1
@@ -211,6 +218,7 @@ func _physics_process(delta: float) -> void:
 		State.DEAD:
 			_process_dead(delta)
 	move_and_slide()
+	_update_air_time(delta)
 	_keep_on_screen()
 	_update_visuals()
 
@@ -244,6 +252,7 @@ func take_damage(amount: float, from_x: float) -> bool:
 	velocity = Vector2(away * hurt_knockback.x, hurt_knockback.y)
 	GameFeel.hitstop(0.1)
 	GameFeel.shake(5.0)
+	Sfx.play(&"player_die" if health <= 0.0 else &"player_hurt")
 	if health <= 0.0:
 		state = State.DEAD
 		died.emit()
@@ -304,6 +313,7 @@ func _process_normal(delta: float) -> void:
 	_apply_gravity(delta)
 	if _jump_buffer_timer > 0.0 and _coyote_timer > 0.0:
 		velocity.y = -_jump_velocity
+		Sfx.play(&"jump")
 		_jump_buffer_timer = 0.0
 		_coyote_timer = 0.0
 		_is_jumping = true
@@ -327,6 +337,7 @@ func _process_dash(_delta: float) -> void:
 
 func _start_dash(direction: int, on_floor: bool) -> void:
 	state = State.DASH
+	Sfx.play(&"dash")
 	_dash_direction = direction
 	_dash_timer = dash_duration
 	_dash_buffer_timer = 0.0
@@ -411,6 +422,7 @@ func _get_attack() -> Dictionary:
 func _start_attack(index: int, input_dir: float) -> void:
 	_swing = Swing.COMBO
 	_attack_index = index
+	Sfx.play(ATTACKS[index]["swing_sound"])
 	_attack_time = 0.0
 	_attack_buffer_timer = 0.0
 	_already_hit.clear()
@@ -422,6 +434,7 @@ func _start_attack(index: int, input_dir: float) -> void:
 
 func _start_down_swing() -> void:
 	_swing = Swing.DOWN
+	Sfx.play(DOWN_SWING["swing_sound"])
 	_attack_time = 0.0
 	_attack_buffer_timer = 0.0
 	_already_hit.clear()
@@ -463,6 +476,7 @@ func _hit_with_sword(attack: Dictionary) -> void:
 	if hit_something:
 		GameFeel.hitstop(attack["hitstop"])
 		GameFeel.shake(attack["shake"])
+		Sfx.play(attack["hit_sound"])
 		if _swing == Swing.DOWN and down_swing_bounce_height > 0.0:
 			_bounce()
 
@@ -471,6 +485,7 @@ func _hit_with_sword(attack: Dictionary) -> void:
 func _bounce() -> void:
 	# The launch speed needed to rise exactly `down_swing_bounce_height`.
 	velocity.y = -sqrt(2.0 * _gravity * down_swing_bounce_height)
+	Sfx.play(&"bounce")
 	# Not a held jump, so letting go of the jump button must not cut it short.
 	_is_jumping = false
 	_air_dashes_left = air_dashes
@@ -483,6 +498,17 @@ func _set_facing(direction: int) -> void:
 	# The sword hitbox and close-range sensor always sit in front of the player.
 	sword_hitbox.position.x = absf(sword_hitbox.position.x) * facing
 	close_range_sensor.position.x = absf(close_range_sensor.position.x) * facing
+
+
+## Tracks time in the air so that landing can make a sound. Tiny hops off
+## the ground (shorter than a few frames) stay silent.
+func _update_air_time(delta: float) -> void:
+	if is_on_floor():
+		if _air_time > 0.12:
+			Sfx.play(&"land")
+		_air_time = 0.0
+	else:
+		_air_time += delta
 
 
 func _tick_timers(delta: float) -> void:

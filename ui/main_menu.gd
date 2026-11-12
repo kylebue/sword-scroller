@@ -26,6 +26,9 @@ func _ready() -> void:
 	debug_toggle.toggled.connect(_on_debug_toggled)
 	# Focus a button so the menu works with keyboard and gamepad.
 	start_button.grab_focus()
+	for button: BaseButton in [start_button, quit_button, debug_toggle]:
+		button.focus_entered.connect(Sfx.play.bind(&"ui_move"))
+		button.pressed.connect(Sfx.play.bind(&"ui_select"))
 
 
 func _on_debug_toggled(enabled: bool) -> void:

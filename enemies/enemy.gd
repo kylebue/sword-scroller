@@ -24,6 +24,8 @@ signal died(enemy: Enemy)
 @export var health_drop_amount := 20.0
 @export var health_pickup_scene: PackedScene
 @export var hit_spark_scene: PackedScene
+## Name of the sound (from audio/sfx.gd) played when this enemy dies.
+@export var death_sound := &"enemy_die"
 
 const GRAVITY := 1400.0
 const MAX_FALL_SPEED := 600.0
@@ -145,6 +147,7 @@ func _die(knockback: Vector2) -> void:
 	remove_from_group("enemies")
 	velocity = Vector2(knockback.x * 1.4, -220.0)
 	died.emit(self)
+	Sfx.play(death_sound)
 	_drop_health()
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.45)

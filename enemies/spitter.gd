@@ -59,6 +59,8 @@ func _on_staggered() -> void:
 func _set_state(new_state: State) -> void:
 	state = new_state
 	_state_time = 0.0
+	if state == State.WINDUP:
+		Sfx.play(&"windup")
 
 
 func _is_on_screen() -> bool:
@@ -79,6 +81,7 @@ func _shoot() -> void:
 	projectile.velocity = Vector2(facing * projectile_speed * speed_multiplier, 0.0)
 	projectile.damage = projectile_damage * damage_multiplier
 	get_parent().add_child(projectile)
+	Sfx.play(&"spit")
 
 
 func _update_visuals() -> void:

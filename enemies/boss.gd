@@ -115,6 +115,7 @@ func _behave(delta: float) -> void:
 			_try_to_hit(body_hitbox, charge_damage)
 			if touching_wall or _state_time >= 2.0:
 				GameFeel.shake(6.0)
+				Sfx.play(&"boss_slam", 1.3)  # Crashing into the wall.
 				velocity = Vector2(-facing * 90.0, -160.0)  # Bounce off the wall.
 				_recover(charge_recover)
 
@@ -175,6 +176,16 @@ func _set_state(new_state: State) -> void:
 	_has_hit = false
 	# The slam hitbox covers the boss and the space in front of it.
 	slam_hitbox.position.x = absf(slam_hitbox.position.x) * facing
+	# The boss reuses the normal sounds at a lower pitch, so it sounds big.
+	match state:
+		State.SLAM_WINDUP, State.CHARGE_WINDUP, State.LEAP_WINDUP:
+			Sfx.play(&"windup", 0.6)
+		State.SLAM, State.LAND:
+			Sfx.play(&"boss_slam")
+		State.CHARGE:
+			Sfx.play(&"dash", 0.6)
+		State.LEAP:
+			Sfx.play(&"jump", 0.5)
 
 
 func _recover(duration: float) -> void:
