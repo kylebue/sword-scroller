@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://pickups/health_pickup.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="shape_pickup"]
+size = Vector2(16, 24)
+
+[node name="HealthPickup" type="Area2D" groups=["offscreen_cleanup"]]
+collision_layer = 16
+collision_mask = 2
+monitorable = false
+script = ExtResource("1_script")
+
+[node name="Visual" type="Node2D" parent="."]
+position = Vector2(0, -10)
+
+[node name="Cross" type="Polygon2D" parent="Visual"]
+color = Color(0.35, 0.95, 0.45, 1)
+polygon = PackedVector2Array(-2, -6, 2, -6, 2, -2, 6, -2, 6, 2, 2, 2, 2, 6, -2, 6, -2, 2, -6, 2, -6, -2, -2, -2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -12)
+shape = SubResource("shape_pickup")

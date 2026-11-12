@@ -1,0 +1,80 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://enemies/boss.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://pickups/health_pickup.tscn" id="2_pickup"]
+[ext_resource type="PackedScene" path="res://effects/hit_spark.tscn" id="3_spark"]
+
+[sub_resource type="RectangleShape2D" id="shape_body"]
+size = Vector2(40, 50)
+
+[sub_resource type="RectangleShape2D" id="shape_slam"]
+size = Vector2(94, 54)
+
+[sub_resource type="RectangleShape2D" id="shape_body_hit"]
+size = Vector2(44, 50)
+
+[sub_resource type="RectangleShape2D" id="shape_land"]
+size = Vector2(110, 18)
+
+[node name="Boss" type="CharacterBody2D"]
+collision_layer = 4
+script = ExtResource("1_script")
+max_health = 260.0
+move_speed = 40.0
+can_be_staggered = false
+health_drop_chance = 1.0
+health_drop_amount = 50.0
+health_pickup_scene = ExtResource("2_pickup")
+hit_spark_scene = ExtResource("3_spark")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -25)
+shape = SubResource("shape_body")
+
+[node name="Visuals" type="Node2D" parent="."]
+
+[node name="Body" type="Polygon2D" parent="Visuals"]
+color = Color(0.9, 0.5, 0.15, 1)
+polygon = PackedVector2Array(-21, -52, 21, -52, 21, 0, -21, 0)
+
+[node name="Horns" type="Polygon2D" parent="Visuals"]
+color = Color(0.95, 0.9, 0.8, 1)
+polygon = PackedVector2Array(-21, -52, -17, -64, -11, -52, 11, -52, 17, -64, 21, -52)
+
+[node name="Eye" type="Polygon2D" parent="Visuals"]
+color = Color(0.2, 0.05, 0.05, 1)
+polygon = PackedVector2Array(6, -44, 18, -44, 18, -37, 6, -37)
+
+[node name="Fist" type="Polygon2D" parent="Visuals"]
+color = Color(0.65, 0.33, 0.1, 1)
+polygon = PackedVector2Array(16, -30, 32, -30, 32, -14, 16, -14)
+
+[node name="SlamHitbox" type="Area2D" parent="."]
+position = Vector2(25, -27)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SlamHitbox"]
+shape = SubResource("shape_slam")
+debug_color = Color(1, 0.2, 0.2, 0.25)
+
+[node name="BodyHitbox" type="Area2D" parent="."]
+position = Vector2(0, -25)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BodyHitbox"]
+shape = SubResource("shape_body_hit")
+debug_color = Color(1, 0.2, 0.2, 0.25)
+
+[node name="LandHitbox" type="Area2D" parent="."]
+position = Vector2(0, -9)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LandHitbox"]
+shape = SubResource("shape_land")
+debug_color = Color(1, 0.2, 0.2, 0.25)

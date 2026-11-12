@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://world/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://world/level_generator.gd" id="2_level"]
+[ext_resource type="PackedScene" path="res://world/ground_chunk.tscn" id="3_chunk"]
+[ext_resource type="PackedScene" path="res://player/player.tscn" id="4_player"]
+[ext_resource type="Script" path="res://world/game_camera.gd" id="5_camera"]
+[ext_resource type="Script" path="res://world/encounter_spawner.gd" id="6_spawner"]
+[ext_resource type="PackedScene" path="res://enemies/grunt.tscn" id="7_grunt"]
+[ext_resource type="PackedScene" path="res://enemies/spitter.tscn" id="8_spitter"]
+[ext_resource type="PackedScene" path="res://enemies/boss.tscn" id="9_boss"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="10_hud"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+boss_scene = ExtResource("9_boss")
+
+[node name="FarBackground" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0.15, 1)
+repeat_size = Vector2(640, 0)
+
+[node name="Mountains" type="Polygon2D" parent="FarBackground"]
+color = Color(0.11, 0.13, 0.2, 1)
+polygon = PackedVector2Array(0, 300, 0, 230, 60, 190, 120, 225, 200, 160, 290, 230, 360, 200, 430, 240, 520, 170, 600, 220, 640, 230, 640, 300)
+
+[node name="NearBackground" type="Parallax2D" parent="."]
+scroll_scale = Vector2(0.4, 1)
+repeat_size = Vector2(640, 0)
+
+[node name="Hills" type="Polygon2D" parent="NearBackground"]
+color = Color(0.12, 0.15, 0.22, 1)
+polygon = PackedVector2Array(0, 300, 0, 265, 80, 250, 170, 270, 260, 245, 350, 268, 450, 252, 540, 272, 640, 265, 640, 300)
+
+[node name="Level" type="Node2D" parent="."]
+script = ExtResource("2_level")
+chunk_scene = ExtResource("3_chunk")
+
+[node name="Entities" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Player" parent="." instance=ExtResource("4_player")]
+position = Vector2(0, 300)
+
+[node name="GameCamera" type="Camera2D" parent="." groups=["camera"]]
+position = Vector2(77, 180)
+process_callback = 0
+script = ExtResource("5_camera")
+
+[node name="EncounterSpawner" type="Node" parent="."]
+script = ExtResource("6_spawner")
+grunt_scene = ExtResource("7_grunt")
+spitter_scene = ExtResource("8_spitter")
+
+[node name="HUD" parent="." instance=ExtResource("10_hud")]

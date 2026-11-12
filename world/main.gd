@@ -1,0 +1,102 @@
+extends Node2D
+## The main game scene. It ties the other pieces together and owns the
+## overall flow of a run:
+##
+##   run right -> fight enemies -> reach the boss distance -> camera locks ->
+##   beat the boss -> camera unlocks -> repeat, a little harder each time.
+
+@export var boss_scene: PackedScene
+## Distance between boss fights, in metres.
+@export var boss_interval_m := 150.0
+
+const FLOOR_Y := 300.0
+## Things are deleted once they are this far off the left of the screen.
+const CLEANUP_MARGIN := 48.0
+
+## `static` means this survives restarting the scene, so the best distance
+## is remembered until the game is closed.
+static var best_distance_m := 0.0
+
+var distance_m := 0.0
+var bosses_defeated := 0
+var boss_active := false
+var is_game_over := false
+
+var _next_boss_m := 0.0
+var _can_restart := false
+
+@onready var player: Player = $Player
+@onready var camera: GameCamera = $GameCamera
+@onready var entities: Node2D = %Entities
+@onready var spawner: EncounterSpawner = $EncounterSpawner
+@onready var hud: HUD = $HUD
+
+
+func _ready() -> void:
+	GameFeel.reset()
+	_next_boss_m = boss_interval_m
+	player.health_changed.connect(hud.set_player_health)
+	player.died.connect(_on_player_died)
+	hud.set_player_health(player.health, player.max_health)
+
+
+func _physics_process(_delta: float) -> void:
+	# The player starts at x = 0, so distance is simply how far right they
+	# have ever been.
+	distance_m = maxf(distance_m, player.global_position.x / Difficulty.PIXELS_PER_METER)
+	hud.set_distance(distance_m)
+	if not boss_active and not is_game_over and distance_m >= _next_boss_m:
+		_start_boss_fight()
+	_remove_things_left_behind()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _can_restart and (event.is_action_pressed("attack") or event.is_action_pressed("jump")):
+		get_tree().reload_current_scene()
+
+
+func _start_boss_fight() -> void:
+	boss_active = true
+	camera.locked = true  # The screen becomes the arena.
+	spawner.enabled = false
+	var boss := boss_scene.instantiate() as Boss
+	boss.setup(bosses_defeated + 1)
+	boss.position = Vector2(camera.right_edge() + 50.0, FLOOR_Y)
+	boss.died.connect(_on_boss_died)
+	entities.add_child(boss)
+	hud.show_boss(boss)
+	hud.show_message("BOSS!")
+
+
+func _on_boss_died(_boss: Enemy) -> void:
+	bosses_defeated += 1
+	boss_active = false
+	camera.locked = false
+	spawner.enabled = true
+	spawner.skip_ahead(250.0)  # A short breather before more enemies arrive.
+	_next_boss_m = distance_m + boss_interval_m
+	GameFeel.hitstop(0.25)
+	GameFeel.shake(10.0)
+	hud.hide_boss()
+	hud.show_message("GO  >>")
+
+
+func _on_player_died() -> void:
+	is_game_over = true
+	spawner.enabled = false
+	best_distance_m = maxf(best_distance_m, distance_m)
+	# A short pause before the game over screen, so the death can be seen and
+	# a mashed attack button does not instantly restart the game.
+	await get_tree().create_timer(0.8).timeout
+	hud.show_game_over(distance_m, best_distance_m)
+	_can_restart = true
+
+
+## The rule of the game: once something scrolls off the left side of the
+## screen it is gone for good. Anything in the "offscreen_cleanup" group
+## (enemies, projectiles, pickups) is deleted when that happens.
+func _remove_things_left_behind() -> void:
+	var limit := camera.left_edge() - CLEANUP_MARGIN
+	for node: Node2D in get_tree().get_nodes_in_group("offscreen_cleanup"):
+		if node.global_position.x < limit:
+			node.queue_free()

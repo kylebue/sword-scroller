@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://effects/hit_spark.gd" id="1_script"]
+
+[node name="HitSpark" type="CPUParticles2D"]
+emitting = false
+amount = 10
+lifetime = 0.3
+one_shot = true
+explosiveness = 1.0
+spread = 180.0
+gravity = Vector2(0, 500)
+initial_velocity_min = 60.0
+initial_velocity_max = 170.0
+scale_amount_min = 2.0
+scale_amount_max = 3.0
+color = Color(1, 0.95, 0.7, 1)
+script = ExtResource("1_script")

@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://world/ground_chunk.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="shape_ground"]
+size = Vector2(640, 64)
+
+[node name="GroundChunk" type="StaticBody2D"]
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(320, 332)
+shape = SubResource("shape_ground")

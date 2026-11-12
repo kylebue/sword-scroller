@@ -1,0 +1,160 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/hud.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="style_bar_bg"]
+bg_color = Color(0.05, 0.05, 0.08, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.85, 0.9, 1)
+
+[sub_resource type="StyleBoxFlat" id="style_health_fill"]
+bg_color = Color(0.35, 0.85, 0.4, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBoxFlat" id="style_boss_fill"]
+bg_color = Color(0.9, 0.35, 0.2, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0, 0, 0)
+
+[node name="HUD" type="CanvasLayer"]
+process_mode = 3
+script = ExtResource("1_script")
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 136.0
+offset_bottom = 18.0
+mouse_filter = 2
+theme_override_styles/background = SubResource("style_bar_bg")
+theme_override_styles/fill = SubResource("style_health_fill")
+value = 100.0
+show_percentage = false
+
+[node name="DistanceLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -128.0
+offset_top = 2.0
+offset_right = -8.0
+offset_bottom = 25.0
+grow_horizontal = 0
+text = "0 m"
+horizontal_alignment = 2
+
+[node name="BossPanel" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 3
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 28.0
+offset_right = 150.0
+offset_bottom = 60.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="BossLabel" type="Label" parent="BossPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 14.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 8
+text = "BOSS"
+horizontal_alignment = 1
+
+[node name="BossBar" type="ProgressBar" parent="BossPanel"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 14.0
+offset_bottom = 24.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("style_bar_bg")
+theme_override_styles/fill = SubResource("style_boss_fill")
+value = 100.0
+show_percentage = false
+
+[node name="MessageLabel" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 90.0
+offset_bottom = 130.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+text = "MESSAGE"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -22.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 8
+text = "Move: A/D or Arrows     Jump: Space     Attack: J, X or Left Mouse     Pause: Esc"
+horizontal_alignment = 1
+
+[node name="PauseLabel" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+text = "PAUSED"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="GameOverPanel" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="GameOverLabel" type="Label" parent="GameOverPanel"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "YOU DIED"
+horizontal_alignment = 1
+vertical_alignment = 1
