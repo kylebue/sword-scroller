@@ -44,6 +44,12 @@ func _process(_delta: float) -> void:
 	offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength)).round()
 
 
+## Jumps straight to the player, ignoring the "only scroll right" rule and
+## the boss lock. Only used by the debug teleport.
+func snap_to_target() -> void:
+	global_position.x = _get_desired_x()
+
+
 ## World x position of the left edge of the screen.
 func left_edge() -> float:
 	return global_position.x - _half_width

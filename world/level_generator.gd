@@ -1,3 +1,4 @@
+class_name LevelGenerator
 extends Node2D
 ## Builds the endless level one chunk at a time.
 ##
@@ -19,14 +20,14 @@ var _chunks: Dictionary[int, GroundChunk] = {}
 
 func _ready() -> void:
 	# Make sure there is ground under the player on the very first frame.
-	_update_chunks()
+	update_chunks()
 
 
 func _physics_process(_delta: float) -> void:
-	_update_chunks()
+	update_chunks()
 
 
-func _update_chunks() -> void:
+func update_chunks() -> void:
 	var first := floori((_camera.left_edge() - margin) / CHUNK_WIDTH)
 	var last := floori((_camera.right_edge() + margin) / CHUNK_WIDTH)
 
@@ -39,6 +40,6 @@ func _update_chunks() -> void:
 			_chunks[index] = chunk
 
 	for index: int in _chunks.keys():
-		if index < first:
+		if index < first or index > last:
 			_chunks[index].queue_free()
 			_chunks.erase(index)

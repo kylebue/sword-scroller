@@ -10,6 +10,8 @@ extends Node2D
 @export var boss_interval_m := 150.0
 
 const FLOOR_Y := 300.0
+const MAIN_MENU_SCENE := "res://ui/main_menu.tscn"
+const DEBUG_TOOLS_SCENE := preload("res://debug/debug_tools.tscn")
 ## Things are deleted once they are this far off the left of the screen.
 const CLEANUP_MARGIN := 48.0
 
@@ -28,6 +30,7 @@ var _can_restart := false
 @onready var player: Player = $Player
 @onready var camera: GameCamera = $GameCamera
 @onready var entities: Node2D = %Entities
+@onready var level: LevelGenerator = $Level
 @onready var spawner: EncounterSpawner = $EncounterSpawner
 @onready var hud: HUD = $HUD
 
@@ -38,6 +41,12 @@ func _ready() -> void:
 	player.health_changed.connect(hud.set_player_health)
 	player.died.connect(_on_player_died)
 	hud.set_player_health(player.health, player.max_health)
+	if DebugMode.enabled:
+		var debug_tools := DEBUG_TOOLS_SCENE.instantiate()
+		debug_tools.teleport_requested.connect(teleport_to)
+		add_child(debug_tools)
+		if DebugMode.start_distance_m > 0.0:
+			teleport_to(DebugMode.start_distance_m)
 
 
 func _physics_process(_delta: float) -> void:
@@ -51,8 +60,37 @@ func _physics_process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _can_restart and (event.is_action_pressed("attack") or event.is_action_pressed("jump")):
+	if not _can_restart:
+		return
+	if event.is_action_pressed("attack") or event.is_action_pressed("jump"):
 		get_tree().reload_current_scene()
+	elif event.is_action_pressed("pause"):
+		get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+
+## Debug helper: jumps the run to `target_m` metres, set up as if the player
+## had got there normally (same difficulty, same number of bosses beaten).
+func teleport_to(target_m: float) -> void:
+	# Clear out everything that is currently alive, including a boss.
+	for group in ["enemies", "offscreen_cleanup"]:
+		for node in get_tree().get_nodes_in_group(group):
+			node.queue_free()
+	boss_active = false
+	camera.locked = false
+	hud.hide_boss()
+
+	player.global_position = Vector2(target_m * Difficulty.PIXELS_PER_METER, FLOOR_Y)
+	player.velocity = Vector2.ZERO
+	camera.snap_to_target()
+	level.update_chunks()  # Make sure there is ground at the new position.
+
+	distance_m = target_m
+	hud.set_distance(distance_m)
+	# The next boss is at the next multiple of the boss interval.
+	bosses_defeated = maxi(ceili(target_m / boss_interval_m) - 1, 0)
+	_next_boss_m = (bosses_defeated + 1) * boss_interval_m
+	spawner.enabled = not is_game_over
+	spawner.skip_ahead(100.0)
 
 
 func _start_boss_fight() -> void:

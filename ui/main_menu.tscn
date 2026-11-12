@@ -1,0 +1,89 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/main_menu.gd" id="1_script"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.09, 0.1, 0.16, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Menu" type="VBoxContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="CenterContainer/Menu"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "SWORD SCROLLER"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="CenterContainer/Menu"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="CenterContainer/Menu"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Start"
+
+[node name="QuitButton" type="Button" parent="CenterContainer/Menu"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Quit"
+
+[node name="DebugToggle" type="CheckButton" parent="CenterContainer/Menu"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Developer debug mode"
+
+[node name="DebugOptions" type="VBoxContainer" parent="CenterContainer/Menu"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="StartDistanceRow" type="HBoxContainer" parent="CenterContainer/Menu/DebugOptions"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CenterContainer/Menu/DebugOptions/StartDistanceRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Start at distance (m)"
+
+[node name="StartDistance" type="SpinBox" parent="CenterContainer/Menu/DebugOptions/StartDistanceRow"]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 100000.0
+custom_arrow_step = 50.0
+
+[node name="DebugHelp" type="Label" parent="CenterContainer/Menu/DebugOptions"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.72, 0.8, 1)
+theme_override_font_sizes/font_size = 8
+text = "Shows all hitboxes (filled in when they can deal damage).
+Press . (period) or N to freeze, then step one frame at a time.
+Pause (Esc) to teleport to any distance."
+horizontal_alignment = 1
