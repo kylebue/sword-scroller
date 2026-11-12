@@ -113,12 +113,13 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -22.0
-offset_bottom = -6.0
+offset_top = -30.0
+offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_font_sizes/font_size = 8
-text = "Move: A/D or Arrows    Jump: Space    Attack: J, X or Left Mouse    Dash: Shift, K or Right Mouse    Pause: Esc"
+text = "Move: A/D or Arrows    Jump: Space    Attack: J, X or Left Mouse    Dash: Shift, K or Right Mouse    Pause: Esc
+In the air, hold S or Down and attack to swing downward"
 horizontal_alignment = 1
 
 [node name="PauseMenu" type="CenterContainer" parent="."]

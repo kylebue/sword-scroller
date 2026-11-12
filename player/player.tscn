@@ -8,6 +8,9 @@ size = Vector2(12, 26)
 [sub_resource type="RectangleShape2D" id="shape_sword"]
 size = Vector2(46, 34)
 
+[sub_resource type="RectangleShape2D" id="shape_down"]
+size = Vector2(36, 32)
+
 [sub_resource type="RectangleShape2D" id="shape_close"]
 size = Vector2(16, 24)
 
@@ -45,6 +48,16 @@ monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="SwordHitbox"]
 shape = SubResource("shape_sword")
+debug_color = Color(1, 0.9, 0.2, 0.25)
+
+[node name="DownHitbox" type="Area2D" parent="."]
+position = Vector2(0, 6)
+collision_layer = 0
+collision_mask = 12
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DownHitbox"]
+shape = SubResource("shape_down")
 debug_color = Color(1, 0.9, 0.2, 0.25)
 
 [node name="CloseRangeSensor" type="Area2D" parent="."]

@@ -6,7 +6,10 @@ extends Enemy
 ##   SLAM   - big swing covering itself and the space in front of it.
 ##            Back away or get fully behind it.
 ##   CHARGE - runs across the arena. Jump over it. It stuns itself on the wall.
-##   LEAP   - jumps to where the player is standing. Move out from under it.
+##   LEAP   - jumps to where the player is standing. Its body hurts in the
+##            air and the landing hurts on the ground. Move out from under
+##            it. It also does this if the player is above it, so nobody can
+##            sit on its head bouncing with downward swings.
 
 enum State {
 	ENTER, IDLE,
@@ -126,6 +129,7 @@ func _behave(delta: float) -> void:
 
 		State.LEAP:
 			velocity.x = _leap_speed_x
+			_try_to_hit(body_hitbox, leap_damage)
 			if _state_time > 0.1 and is_on_floor():
 				GameFeel.shake(7.0)
 				_set_state(State.LAND)
@@ -147,7 +151,7 @@ func get_active_hitboxes() -> Array[Area2D]:
 	match state:
 		State.SLAM:
 			return [slam_hitbox]
-		State.CHARGE:
+		State.CHARGE, State.LEAP:
 			return [body_hitbox]
 		State.LAND:
 			return [land_hitbox]
@@ -156,7 +160,10 @@ func get_active_hitboxes() -> Array[Area2D]:
 
 func _choose_attack() -> void:
 	var roll := randf()
-	if absf(distance_to_player()) <= slam_range:
+	var player_is_above := global_position.y - player.global_position.y > 40.0
+	if player_is_above and absf(distance_to_player()) <= slam_range:
+		_set_state(State.LEAP_WINDUP)
+	elif absf(distance_to_player()) <= slam_range:
 		_set_state(State.SLAM_WINDUP if roll < 0.65 else State.LEAP_WINDUP)
 	else:
 		_set_state(State.CHARGE_WINDUP if roll < 0.55 else State.LEAP_WINDUP)

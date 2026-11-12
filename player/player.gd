@@ -15,11 +15,16 @@ extends CharacterBody2D
 ##    recovery, so mashing attack flows instead of waiting on animations.
 ##  - Dash cancelling: a dash can interrupt a sword swing at any time, so
 ##    you are never stuck in an attack when you need to get away.
+##  - Downward swing: hold down and attack in the air to swing below you.
+##    Landing a hit bounces you back up and gives your air dash back.
 
 signal health_changed(current: float, maximum: float)
 signal died
 
 enum State { NORMAL, DASH, HURT, DEAD }
+
+## What kind of sword swing is in progress, if any.
+enum Swing { NONE, COMBO, DOWN }
 
 ## The sword combo. Each entry is one swing. All times are in seconds.
 ##   startup   - delay between pressing attack and the blade being able to hit
@@ -48,6 +53,15 @@ const ATTACKS: Array[Dictionary] = [
 		"hitstop": 0.085, "shake": 4.0,
 	},
 ]
+
+## The downward swing (hold down + attack in the air). It uses the same
+## fields as the ATTACKS entries above, and has a longer `active` time so it
+## is easier to land while falling.
+const DOWN_SWING: Dictionary = {
+	"startup": 0.033, "active": 0.15, "recovery": 0.12,
+	"damage": 12.0, "knockback": 0.0, "lunge": 0.0,
+	"hitstop": 0.05, "shake": 2.0,
+}
 
 ## Half the width of the collision shape. Used to keep the player on screen.
 const HALF_WIDTH := 6.0
@@ -104,6 +118,9 @@ const HALF_WIDTH := 6.0
 @export var combo_reset_time := 0.35
 ## Movement speed multiplier while recovering from a ground swing.
 @export var attack_move_multiplier := 0.5
+## How high (in pixels) you bounce when a downward swing hits something.
+## Set to 0 for no bounce.
+@export var down_swing_bounce_height := 40.0
 ## How long you lose control after being hit.
 @export var hurt_time := 0.22
 ## How long you cannot be hit again after being hit.
@@ -138,8 +155,10 @@ var _is_jumping := false
 var _dash_direction := 1
 var _air_dashes_left := 0
 
-## Which entry of ATTACKS is being performed. -1 means "not attacking".
-var _attack_index := -1
+## The kind of swing in progress. Swing.NONE means "not attacking".
+var _swing := Swing.NONE
+## Which entry of ATTACKS is being performed (only used by combo swings).
+var _attack_index := 0
 ## Seconds since the current swing started.
 var _attack_time := 0.0
 ## Which swing the next attack press will start.
@@ -152,9 +171,11 @@ var _already_hit: Array[Node] = []
 @onready var sword: Polygon2D = $Visuals/Sword
 @onready var slash: Polygon2D = $Visuals/Slash
 @onready var sword_hitbox: Area2D = $SwordHitbox
+@onready var down_hitbox: Area2D = $DownHitbox
 @onready var close_range_sensor: Area2D = $CloseRangeSensor
 @onready var camera := get_tree().get_first_node_in_group("camera") as GameCamera
 @onready var _body_color: Color = body.color
+@onready var _slash_position: Vector2 = slash.position
 
 
 func _ready() -> void:
@@ -195,17 +216,17 @@ func _physics_process(delta: float) -> void:
 
 
 func is_attacking() -> bool:
-	return _attack_index >= 0
+	return _swing != Swing.NONE
 
 
 ## The hitboxes that can deal damage right now (used by the debug overlay).
 func get_active_hitboxes() -> Array[Area2D]:
 	if is_attacking():
-		var attack := ATTACKS[_attack_index]
+		var attack := _get_attack()
 		var active_start: float = attack["startup"]
 		var active_end: float = active_start + attack["active"]
 		if _attack_time >= active_start and _attack_time < active_end:
-			return [sword_hitbox]
+			return [down_hitbox if _swing == Swing.DOWN else sword_hitbox]
 	return []
 
 
@@ -216,7 +237,7 @@ func take_damage(amount: float, from_x: float) -> bool:
 		return false
 	health = maxf(health - amount, 0.0)
 	health_changed.emit(health, max_health)
-	_attack_index = -1
+	_swing = Swing.NONE
 	_combo_step = 0
 	_is_jumping = false
 	var away := 1.0 if global_position.x >= from_x else -1.0
@@ -258,7 +279,7 @@ func _process_normal(delta: float) -> void:
 		_process_dash(delta)  # Start moving on this very frame.
 		return
 
-	_update_attack(delta, input_dir)
+	_update_attack(delta, input_dir, on_floor)
 
 	# Facing is locked during a swing; each new swing can pick a new direction.
 	if not is_attacking() and input_dir != 0.0:
@@ -312,7 +333,7 @@ func _start_dash(direction: int, on_floor: bool) -> void:
 	if not on_floor:
 		_air_dashes_left -= 1
 	# Dashing cancels whatever swing was in progress.
-	_attack_index = -1
+	_swing = Swing.NONE
 	_combo_step = 0
 	_is_jumping = false
 
@@ -338,14 +359,25 @@ func _apply_gravity(delta: float) -> void:
 
 # --- Sword combo -------------------------------------------------------------
 
-func _update_attack(delta: float, input_dir: float) -> void:
+func _update_attack(delta: float, input_dir: float, on_floor: bool) -> void:
+	# Holding down while attacking in the air swings downward instead.
+	var wants_down_swing := not on_floor and Input.is_action_pressed("move_down")
+
+	# Landing ends a downward swing straight away, so you can act at once.
+	if _swing == Swing.DOWN and on_floor:
+		_swing = Swing.NONE
+		_combo_step = 0
+
 	if not is_attacking():
 		if _attack_buffer_timer > 0.0:
-			_start_attack(_combo_step if _combo_timer > 0.0 else 0, input_dir)
+			if wants_down_swing:
+				_start_down_swing()
+			else:
+				_start_attack(_combo_step if _combo_timer > 0.0 else 0, input_dir)
 		return
 
 	_attack_time += delta
-	var attack := ATTACKS[_attack_index]
+	var attack := _get_attack()
 	var active_start: float = attack["startup"]
 	var active_end: float = active_start + attack["active"]
 	var attack_end: float = active_end + attack["recovery"]
@@ -353,17 +385,31 @@ func _update_attack(delta: float, input_dir: float) -> void:
 	if _attack_time >= active_start and _attack_time < active_end:
 		_hit_with_sword(attack)
 
-	var is_last_swing := _attack_index == ATTACKS.size() - 1
-	if _attack_time >= active_end and _attack_buffer_timer > 0.0 and not is_last_swing:
+	# Every swing except the combo finisher can be cancelled into another
+	# swing. For downward swings this is what lets you bounce on an enemy
+	# again and again without needing perfect timing.
+	var can_chain := _swing == Swing.DOWN or _attack_index < ATTACKS.size() - 1
+	if _attack_time >= active_end and _attack_buffer_timer > 0.0 and can_chain:
 		# Combo cancel: skip the rest of the recovery and swing again.
-		_start_attack(_attack_index + 1, input_dir)
+		if wants_down_swing:
+			_start_down_swing()
+		else:
+			_start_attack(_attack_index + 1 if _swing == Swing.COMBO else 0, input_dir)
 	elif _attack_time >= attack_end:
-		_combo_step = (_attack_index + 1) % ATTACKS.size()
+		# A finished combo swing leads on to the next one; a downward swing
+		# starts the combo over.
+		_combo_step = (_attack_index + 1) % ATTACKS.size() if _swing == Swing.COMBO else 0
 		_combo_timer = combo_reset_time
-		_attack_index = -1
+		_swing = Swing.NONE
+
+
+## The data for the swing in progress.
+func _get_attack() -> Dictionary:
+	return DOWN_SWING if _swing == Swing.DOWN else ATTACKS[_attack_index]
 
 
 func _start_attack(index: int, input_dir: float) -> void:
+	_swing = Swing.COMBO
 	_attack_index = index
 	_attack_time = 0.0
 	_attack_buffer_timer = 0.0
@@ -374,9 +420,16 @@ func _start_attack(index: int, input_dir: float) -> void:
 		_set_facing(int(input_dir))
 
 
+func _start_down_swing() -> void:
+	_swing = Swing.DOWN
+	_attack_time = 0.0
+	_attack_buffer_timer = 0.0
+	_already_hit.clear()
+
+
 ## Target horizontal speed while swinging on the ground.
 func _get_ground_attack_speed(input_dir: float) -> float:
-	var attack := ATTACKS[_attack_index]
+	var attack := _get_attack()
 	var lunge_end: float = attack["startup"] + attack["active"]
 	if _attack_time < lunge_end:
 		# Step forward with the swing, unless the player is holding back or
@@ -390,9 +443,10 @@ func _get_ground_attack_speed(input_dir: float) -> float:
 
 
 func _hit_with_sword(attack: Dictionary) -> void:
+	var hitbox := down_hitbox if _swing == Swing.DOWN else sword_hitbox
 	var hit_something := false
 	# Enemies are physics bodies...
-	for target in sword_hitbox.get_overlapping_bodies():
+	for target in hitbox.get_overlapping_bodies():
 		if target in _already_hit or not target.has_method("take_damage"):
 			continue
 		_already_hit.append(target)
@@ -400,7 +454,7 @@ func _hit_with_sword(attack: Dictionary) -> void:
 		target.take_damage(attack["damage"], knockback)
 		hit_something = true
 	# ...and enemy projectiles are areas, which the sword can destroy.
-	for target in sword_hitbox.get_overlapping_areas():
+	for target in hitbox.get_overlapping_areas():
 		if target in _already_hit or not target.has_method("on_sword_hit"):
 			continue
 		_already_hit.append(target)
@@ -409,6 +463,17 @@ func _hit_with_sword(attack: Dictionary) -> void:
 	if hit_something:
 		GameFeel.hitstop(attack["hitstop"])
 		GameFeel.shake(attack["shake"])
+		if _swing == Swing.DOWN and down_swing_bounce_height > 0.0:
+			_bounce()
+
+
+## Pops the player back up after a downward swing connects.
+func _bounce() -> void:
+	# The launch speed needed to rise exactly `down_swing_bounce_height`.
+	velocity.y = -sqrt(2.0 * _gravity * down_swing_bounce_height)
+	# Not a held jump, so letting go of the jump button must not cut it short.
+	_is_jumping = false
+	_air_dashes_left = air_dashes
 
 
 # --- Helpers -----------------------------------------------------------------
@@ -455,16 +520,24 @@ func _update_visuals() -> void:
 
 	var slash_visible := false
 	if is_attacking():
-		var attack := ATTACKS[_attack_index]
+		var attack := _get_attack()
 		var active_start: float = attack["startup"]
 		# Keep the slash on screen slightly longer than it can hit so it reads.
 		var slash_end: float = active_start + attack["active"] + 0.04
 		slash_visible = _attack_time >= active_start and _attack_time < slash_end
-		# Alternate the slash direction per swing; the finisher is bigger.
-		match _attack_index:
-			0: slash.scale = Vector2(1.0, 1.0)
-			1: slash.scale = Vector2(1.0, -1.0)
-			_: slash.scale = Vector2(1.3, 1.3)
+		if _swing == Swing.DOWN:
+			# Point the slash straight down, underneath the player.
+			slash.position = Vector2(0.0, -4.0)
+			slash.rotation = PI / 2.0
+			slash.scale = Vector2(1.2, 1.2)
+		else:
+			slash.position = _slash_position
+			slash.rotation = 0.0
+			# Alternate the slash direction per swing; the finisher is bigger.
+			match _attack_index:
+				0: slash.scale = Vector2(1.0, 1.0)
+				1: slash.scale = Vector2(1.0, -1.0)
+				_: slash.scale = Vector2(1.3, 1.3)
 	slash.visible = slash_visible
 	sword.visible = not is_attacking()
 

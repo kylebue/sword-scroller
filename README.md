@@ -25,6 +25,7 @@ All visuals are coloured-rectangle placeholders, ready to be swapped for pixel a
 | Jump (hold for higher) | Space, W or Up | A (bottom face button) |
 | Attack (press repeatedly to combo) | J, X or left mouse button | X (left face button) |
 | Dash (hold a direction) | Shift, K or right mouse button | RB or B |
+| Downward swing (in the air) | Hold S or Down, then attack | Hold down, then X |
 | Pause | Esc or P | Start |
 
 Hold a direction when you press attack to swing that way, even behind you.
@@ -33,6 +34,11 @@ Projectiles can be jumped over or cut down with the sword.
 The dash goes in the direction you are holding (not the way you are facing),
 works on the ground and once per jump in the air, cannot be cancelled, and
 does **not** make you invincible. It can interrupt a sword swing.
+
+The downward swing hits below you while airborne. When it connects you bounce
+back up and get your air dash back, so you can bounce on enemies repeatedly.
+Enemies answer this: grunts swing upward and the boss leaps at you, each with
+the usual warning, so bounce once or twice and then get away.
 
 ## Developer debug mode
 
@@ -79,7 +85,9 @@ Inspector. Hover over a property name to read what it does.
 | Dash distance (speed x duration), cooldown, air dashes | Player node > **Dash** |
 | Health, attack buffer, combo window, knockback when hit | Player node > **Combat** |
 | Speed, damage, reach-in and weight of each sword swing | The `ATTACKS` table at the top of `player/player.gd` |
-| The sword's reach | Resize `SwordHitbox` in `player/player.tscn` |
+| The downward swing's timing and damage | `DOWN_SWING`, just below `ATTACKS` |
+| How high a downward swing bounces you (0 = no bounce) | Player node > **Combat** > Down Swing Bounce Height |
+| The sword's reach | Resize `SwordHitbox` (or `DownHitbox`) in `player/player.tscn` |
 | How strong hitstop and screen shake are | `hitstop` / `shake` in `ATTACKS`, and `effects/game_feel.gd` |
 | Where the player sits on screen | `world/main.tscn` > GameCamera > Player Screen Position |
 | How fast the game gets harder | `world/difficulty.gd` |

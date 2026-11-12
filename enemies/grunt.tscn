@@ -10,6 +10,9 @@ size = Vector2(14, 26)
 [sub_resource type="RectangleShape2D" id="shape_attack"]
 size = Vector2(30, 26)
 
+[sub_resource type="RectangleShape2D" id="shape_up"]
+size = Vector2(30, 48)
+
 [node name="Grunt" type="CharacterBody2D" groups=["offscreen_cleanup"]]
 collision_layer = 4
 script = ExtResource("1_script")
@@ -37,6 +40,12 @@ rotation = 0.698132
 color = Color(0.55, 0.45, 0.35, 1)
 polygon = PackedVector2Array(0, -2, 16, -3, 16, 3, 0, 2)
 
+[node name="Swipe" type="Polygon2D" parent="Visuals"]
+visible = false
+position = Vector2(14, -13)
+color = Color(1, 0.6, 0.35, 1)
+polygon = PackedVector2Array(8, -14, 17, -9, 21, 0, 17, 9, 8, 14, 13, 6, 15, 0, 13, -6)
+
 [node name="AttackHitbox" type="Area2D" parent="."]
 position = Vector2(20, -13)
 collision_layer = 0
@@ -45,4 +54,14 @@ monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
 shape = SubResource("shape_attack")
+debug_color = Color(1, 0.2, 0.2, 0.25)
+
+[node name="UpHitbox" type="Area2D" parent="."]
+position = Vector2(0, -50)
+collision_layer = 0
+collision_mask = 2
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="UpHitbox"]
+shape = SubResource("shape_up")
 debug_color = Color(1, 0.2, 0.2, 0.25)
