@@ -7,6 +7,9 @@ sword combo. The screen only ever scrolls right: anything that leaves the left
 edge is gone for good. Every 150 m a boss locks the screen until it is beaten,
 and everything gets steadily harder the farther you go.
 
+The game opens on a main menu, which also has a switch for a temporary
+**developer debug mode** (see below).
+
 All visuals are coloured-rectangle placeholders, ready to be swapped for pixel art.
 
 ## Running it
@@ -21,10 +24,29 @@ All visuals are coloured-rectangle placeholders, ready to be swapped for pixel a
 | Move | A / D or Left / Right | D-pad or left stick |
 | Jump (hold for higher) | Space, W or Up | A (bottom face button) |
 | Attack (press repeatedly to combo) | J, X or left mouse button | X (left face button) |
+| Dash (hold a direction) | Shift, K or right mouse button | RB or B |
 | Pause | Esc or P | Start |
 
 Hold a direction when you press attack to swing that way, even behind you.
 Projectiles can be jumped over or cut down with the sword.
+
+The dash goes in the direction you are holding (not the way you are facing),
+works on the ground and once per jump in the air, cannot be cancelled, and
+does **not** make you invincible. It can interrupt a sword swing.
+
+## Developer debug mode
+
+Switch on **Developer debug mode** on the main menu before pressing Start.
+
+| Feature | How |
+| --- | --- |
+| Hitboxes | Always drawn. Green = player body, orange = enemy bodies, yellow = your sword, red = enemy attacks, blue = sensors and pickups. A hitbox is an outline normally and is **filled in on the exact frames it can deal damage**. |
+| State labels | Each character's current state (and enemy health) is shown above its head. |
+| Freeze and frame step | Press **.** (period) or **N** to freeze. Press again to advance one frame; hold it for slow motion. **Esc** resumes. Held movement keys still apply, and a jump, attack or dash pressed while frozen happens on the next step. |
+| Teleport | Set **Start at distance** on the menu, or pause (Esc) during a run, type a distance and press **Go**. Difficulty and the boss schedule are set as if you had run there. |
+
+Everything for this mode lives in the `debug/` folder; `debug/debug_mode.gd`
+explains how to remove it when it is no longer needed.
 
 To change the bindings: **Project > Project Settings > Input Map**.
 
@@ -41,7 +63,9 @@ To change the bindings: **Project > Project Settings > Input Map**.
 | `enemies/enemy.gd` | Base class shared by all enemies (health, knockback, death). |
 | `enemies/grunt.gd`, `spitter.gd`, `boss.gd` | The AI for each enemy type. |
 | `effects/game_feel.gd` | Hitstop and screen shake (autoload named `GameFeel`). |
+| `ui/main_menu.*` | The main menu (the scene the game starts on). |
 | `ui/hud.*` | Health bars, distance, messages, pause and game over screens. |
+| `debug/` | The temporary developer debug mode. |
 
 ## Tuning cheat sheet
 
@@ -52,6 +76,7 @@ Inspector. Hover over a property name to read what it does.
 | --- | --- |
 | Run speed, acceleration, how fast you stop or turn | `player/player.tscn` > Player node > **Movement** |
 | Jump height, floatiness, coyote time, jump buffer | Player node > **Jump** |
+| Dash distance (speed x duration), cooldown, air dashes | Player node > **Dash** |
 | Health, attack buffer, combo window, knockback when hit | Player node > **Combat** |
 | Speed, damage, reach-in and weight of each sword swing | The `ATTACKS` table at the top of `player/player.gd` |
 | The sword's reach | Resize `SwordHitbox` in `player/player.tscn` |
@@ -61,8 +86,8 @@ Inspector. Hover over a property name to read what it does.
 | Distance between bosses | `world/main.tscn` > Main node > Boss Interval M |
 | An enemy's health, speed, damage, warning time | Open its scene in `enemies/` and select the root node |
 
-Useful while tuning: **Debug > Visible Collision Shapes** shows every hitbox
-while the game runs (sword = yellow, enemy attacks = red).
+Useful while tuning: the developer debug mode above shows every hitbox and
+lets you step through attacks one frame at a time.
 
 If motion looks slightly choppy on a high-refresh-rate monitor, try
 **Project Settings > Physics > Common > Physics Interpolation**.
