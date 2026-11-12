@@ -60,6 +60,13 @@ func _behave(delta: float) -> void:
 				_set_state(State.CHASE)
 
 
+## The hitboxes that can deal damage right now (used by the debug overlay).
+func get_active_hitboxes() -> Array[Area2D]:
+	if state == State.STRIKE:
+		return [attack_hitbox]
+	return []
+
+
 func _on_staggered() -> void:
 	_set_state(State.CHASE)
 

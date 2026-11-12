@@ -48,8 +48,13 @@ var _state_time := 0.0
 var _recover_time := 0.0
 var _has_hit := false
 var _leap_speed_x := 0.0
+## The attack state that led into the current RECOVER state.
+var _last_attack := State.IDLE
 
 @onready var body: Polygon2D = $Visuals/Body
+@onready var fist: Polygon2D = $Visuals/Fist
+@onready var slam_effect: Polygon2D = $Visuals/SlamEffect
+@onready var land_effect: Polygon2D = $Visuals/LandEffect
 @onready var slam_hitbox: Area2D = $SlamHitbox
 @onready var body_hitbox: Area2D = $BodyHitbox
 @onready var land_hitbox: Area2D = $LandHitbox
@@ -137,6 +142,18 @@ func _behave(delta: float) -> void:
 				_set_state(State.IDLE)
 
 
+## The hitboxes that can deal damage right now (used by the debug overlay).
+func get_active_hitboxes() -> Array[Area2D]:
+	match state:
+		State.SLAM:
+			return [slam_hitbox]
+		State.CHARGE:
+			return [body_hitbox]
+		State.LAND:
+			return [land_hitbox]
+	return []
+
+
 func _choose_attack() -> void:
 	var roll := randf()
 	if absf(distance_to_player()) <= slam_range:
@@ -154,6 +171,7 @@ func _set_state(new_state: State) -> void:
 
 
 func _recover(duration: float) -> void:
+	_last_attack = state
 	_recover_time = duration
 	_set_state(State.RECOVER)
 
@@ -180,17 +198,30 @@ func _update_visuals() -> void:
 	# Placeholder telegraphs: a different colour for each wind-up, and a
 	# dull colour while recovering to show "hit me now".
 	visuals.scale.y = 1.0
+	fist.position = Vector2.ZERO
 	match state:
 		State.SLAM_WINDUP:
 			body.color = Color(1.0, 0.85, 0.2)
+			fist.position = Vector2(-22.0, -36.0)  # Raised behind its head.
 		State.CHARGE_WINDUP:
 			body.color = Color(1.0, 0.3, 0.2)
 		State.LEAP_WINDUP:
 			body.color = Color(0.4, 0.9, 1.0)
 			visuals.scale.y = 0.8  # Crouch.
-		State.SLAM, State.CHARGE, State.LEAP, State.LAND:
+		State.SLAM:
+			body.color = Color(1.0, 1.0, 1.0)
+			fist.position = Vector2(34.0, 14.0)  # Smashed into the ground in front.
+		State.CHARGE, State.LEAP, State.LAND:
 			body.color = Color(1.0, 1.0, 1.0)
 		State.RECOVER:
 			body.color = _body_color.darkened(0.45)
 		_:
 			body.color = _body_color
+
+	# Show where the slam and the leap landing actually hit. The effects stay
+	# visible a moment longer than the hit itself so they are easy to read.
+	var just_finished := state == State.RECOVER and _state_time < 0.1
+	slam_effect.visible = state == State.SLAM or (just_finished and _last_attack == State.SLAM)
+	land_effect.visible = state == State.LAND or (just_finished and _last_attack == State.LAND)
+	if slam_effect.visible:
+		fist.position = Vector2(34.0, 14.0)

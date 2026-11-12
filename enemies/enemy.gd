@@ -116,6 +116,11 @@ func face_player() -> void:
 
 # --- Functions for subclasses to override -----------------------------------
 
+## The hitboxes that can deal damage right now (used by the debug overlay).
+func get_active_hitboxes() -> Array[Area2D]:
+	return []
+
+
 ## The enemy's AI. Runs every physics frame while alive and not staggered.
 func _behave(_delta: float) -> void:
 	pass
